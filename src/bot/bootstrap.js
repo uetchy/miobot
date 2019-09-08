@@ -5,7 +5,7 @@ const addSeconds = require('date-fns/addSeconds')
 const differenceInSeconds = require('date-fns/differenceInSeconds')
 const assert = require('assert')
 
-const { getAuthorizeURL } = require('../core/mio')
+const { getAuthorizeURL, calcDataCap } = require('../core/mio')
 const { createUser, getUser } = require('../core/database')
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -73,6 +73,7 @@ bootstrap.on('message', async (ctx) => {
       username: id_token.username,
       token: container.token,
       tokenExpiresAt,
+      dataCap: await calcDataCap(container.token),
     }
     ctx.deleteMessage(message_id)
   } catch (err) {
