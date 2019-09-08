@@ -31,10 +31,10 @@ async function connectToDatabase() {
   return client
 }
 
-async function createUser({ userID, username, token, tokenExpiresAt }) {
+async function createUser(userData) {
   const db = await connectToDatabase()
   const User = db.model('User')
-  const user = new User({ userID, username, token, tokenExpiresAt })
+  const user = new User(userData)
   const resp = await user.save()
 
   return resp
