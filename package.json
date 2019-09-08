@@ -9,6 +9,7 @@
     "dev": "run-p dev:*",
     "dev:server": "nodemon -w src --exec node src/server.js",
     "dev:web": "PORT=5000 BROWSER=none yarn --cwd src/web start",
+    "heroku-postinstall": "yarn --cwd src/web install",
     "job": "node src/job.js",
     "start": "node src/server.js"
   },

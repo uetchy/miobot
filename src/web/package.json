@@ -4,8 +4,6 @@
   "scripts": {
     "build": "NODE_ENV=production react-scripts build",
     "eject": "react-scripts eject",
-    "now-build": "yarn build",
-    "now-dev": "BROWSER=none react-scripts start",
     "start": "react-scripts start",
     "test": "react-scripts test"
   },
