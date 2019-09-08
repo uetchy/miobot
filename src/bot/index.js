@@ -34,8 +34,7 @@ stage.register(boostrapScene)
 
 const session = new RedisSession({
   store: {
-    host: REDISCLOUD_URL,
-    port: 6379,
+    url: REDISCLOUD_URL,
   },
 })
 

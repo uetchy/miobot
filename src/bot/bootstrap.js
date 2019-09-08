@@ -9,7 +9,9 @@ const { getAuthorizeURL } = require('../core/mio')
 const { createUser, getUser } = require('../core/database')
 
 const JWT_SECRET = process.env.JWT_SECRET
+const MIO_CALLBACK_URL = process.env.MIO_CALLBACK_URL
 assert(JWT_SECRET, 'JWT_SECRET not specified')
+assert(MIO_CALLBACK_URL, 'MIO_CALLBACK_URL not specified')
 
 // boostrap
 const bootstrap = new Scene('bootstrap')
@@ -25,7 +27,7 @@ bootstrap.enter(async (ctx) => {
   }
 
   const state = jwt.sign({ id: id, username: username }, JWT_SECRET)
-  const authURL = getAuthorizeURL('http://localhost:3000/callback', state)
+  const authURL = getAuthorizeURL(MIO_CALLBACK_URL, state)
   const button = inlineKeyboard([
     urlButton('Proceed to IIJmio', authURL),
   ]).extra()
