@@ -17,10 +17,10 @@ const JWT_SECRET = process.env.JWT_SECRET
 const BOT_TOKEN = process.env.BOT_TOKEN
 const WEBHOOK_DOMAIN = process.env.WEBHOOK_DOMAIN
 const HELP = `
-/help - このメッセージ
-/start - Botの有効化
-/deactivate - Botの無効化
 /usage - データ使用量の確認
+/help - ヘルプの表示
+/deactivate - Botの無効化
+/start - Botの有効化
 `
 
 assert(REDISCLOUD_URL, 'REDISCLOUD_URL is missing')
