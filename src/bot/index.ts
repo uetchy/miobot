@@ -32,9 +32,8 @@ const JWT_SECRET = process.env.JWT_SECRET!
 const BOT_TOKEN = process.env.BOT_TOKEN!
 const WEBHOOK_DOMAIN = process.env.WEBHOOK_DOMAIN!
 const HELP = `
-/switch - クーポンスイッチ
 /usage - データ使用量の確認
-/status - エコモードステータス
+/switch - クーポンスイッチ
 /help - ヘルプの表示
 /deactivate - Botの無効化
 /start - Botの有効化
@@ -93,11 +92,12 @@ bot.command('usage', async (ctx) => {
 })
 
 bot.command('switch', async (ctx) => {
+  const { isCoupon } = await getUser(ctx)
   const panel = inlineKeyboard([
     callbackButton('ON', 'couponOn'),
     callbackButton('OFF', 'couponOff'),
   ]).extra()
-  await ctx.reply(`クーポンスイッチ`, panel)
+  await ctx.reply(`エコモード ${isCoupon ? 'OFF' : 'ON'}`, panel)
 })
 
 bot.action('couponOn', async (ctx) => {
@@ -110,11 +110,6 @@ bot.action('couponOff', async (ctx) => {
   const { token, serviceCode } = await getUser(ctx)
   await setCouponUseStatus(false, { serviceCode: serviceCode, token })
   await ctx.reply(`クーポンスイッチをオフにしました`)
-})
-
-bot.command('status', async (ctx) => {
-  const { isCoupon } = await getUser(ctx)
-  await ctx.reply(`エコモード ${isCoupon ? 'OFF' : 'ON'}`)
 })
 
 bot.command('deactivate', async (ctx) => {
