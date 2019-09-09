@@ -40,12 +40,16 @@ async function handleUser(user: UserDocument) {
   const { usage } = await getDataUsage(user.token)
 
   if (usage > user.dataCap) {
+    console.log('data exceeded')
+
     // switch coupon and notify only if coupon switch is enabled
     if (user.isCoupon) {
       await setCouponUseStatus(false, {
         token: user.token,
         serviceCode: user.serviceCode,
       })
+
+      console.log('eco on')
 
       await sendMessage(
         user.userID,
@@ -54,16 +58,30 @@ async function handleUser(user: UserDocument) {
     }
   }
 
+  console.log('TZ', process.env.TZ)
+  console.log('startOfToday', startOfToday())
+  console.log('startOfToday(Locale)', startOfToday().toLocaleDateString())
+  console.log('lastUpdate', user.lastUpdate)
+  console.log('lastUpdate(Locale)', user.lastUpdate.toLocaleDateString())
+
   // recalc data caps and notify new value every day
   if (startOfToday() > user.lastUpdate) {
     const { remainingCoupon, isCoupon } = await getAvailableCoupon(user.token)
     const newDataCap = calcDataCap(remainingCoupon)
+    console.log('new day')
+
+    await sendMessage(
+      user.userID,
+      `次の日になりました。本日の残量は ${newDataCap} MBです`
+    )
 
     if (!isCoupon) {
+      console.log('eco off')
       await setCouponUseStatus(true, {
         token: user.token,
         serviceCode: user.serviceCode,
       })
+      await sendMessage(user.userID, `エコモードをOFFにしました`)
     }
 
     await user.updateOne({
@@ -71,11 +89,6 @@ async function handleUser(user: UserDocument) {
       lastUpdate: new Date(),
       isCoupon: true,
     })
-
-    await sendMessage(
-      user.userID,
-      `次の日になりました。本日の残量は ${newDataCap} MBです`
-    )
   }
 }
 
@@ -85,6 +98,7 @@ async function handler() {
   let hasError = false
   for (const user of users) {
     try {
+      console.log(`Start(${user.username}):`)
       await handleUser(user)
     } catch (err) {
       console.log(`Error(${user.username}):`)
