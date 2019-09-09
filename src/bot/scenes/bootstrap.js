@@ -1,15 +1,17 @@
-const { inlineKeyboard, urlButton, callbackButton } = require('telegraf/markup')
+const assert = require('assert')
 const jwt = require('jsonwebtoken')
 const Scene = require('telegraf/scenes/base')
+const { inlineKeyboard, urlButton, callbackButton } = require('telegraf/markup')
 const addSeconds = require('date-fns/addSeconds')
 const differenceInSeconds = require('date-fns/differenceInSeconds')
-const assert = require('assert')
 
 const { getAuthorizeURL, calcDataCap } = require('../../core/mio')
 const { createUser, getUser } = require('../../core/database')
 
+// config vars
 const JWT_SECRET = process.env.JWT_SECRET
 const MIO_CALLBACK_URL = process.env.MIO_CALLBACK_URL
+
 assert(JWT_SECRET, 'JWT_SECRET not specified')
 assert(MIO_CALLBACK_URL, 'MIO_CALLBACK_URL not specified')
 

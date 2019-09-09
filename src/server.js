@@ -1,8 +1,6 @@
 const express = require('express')
 const path = require('path')
-
 const bot = require('./bot')
-// const api = require('./worker')
 
 const PORT = process.env.PORT || 3000
 
