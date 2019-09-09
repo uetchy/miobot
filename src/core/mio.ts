@@ -1,16 +1,18 @@
-const fetch = require('node-fetch')
-const { format } = require('date-fns')
-const { remainingDays } = require('./date')
+import assert from 'assert'
+import fetch from 'node-fetch'
+import { format } from 'date-fns'
+import { remainingDays } from './date'
 
-const MIO_DEVELOPER_ID = process.env.MIO_DEVELOPER_ID
+const MIO_DEVELOPER_ID = process.env.MIO_DEVELOPER_ID!
+assert(MIO_DEVELOPER_ID, 'MIO_DEVELOPER_ID is missing')
 
-function getAuthorizeURL(redirectURI, state = 1) {
+export function getAuthorizeURL(redirectURI: string, state: string = '1') {
   return `https://api.iijmio.jp/mobile/d/v1/authorization?response_type=token&client_id=${encodeURIComponent(
     MIO_DEVELOPER_ID
   )}&state=${state}&redirect_uri=${encodeURIComponent(redirectURI)}`
 }
 
-async function getDataUsage(token) {
+export async function getDataUsage(token: string) {
   const response = await fetch(
     'https://api.iijmio.jp/mobile/d/v2/log/packet/',
     {
@@ -28,7 +30,7 @@ async function getDataUsage(token) {
   return { serviceCode, usage }
 }
 
-async function getAvailableCoupon(token) {
+export async function getAvailableCoupon(token: string) {
   const response = await fetch('https://api.iijmio.jp/mobile/d/v2/coupon/', {
     headers: {
       'X-IIJmio-Developer': MIO_DEVELOPER_ID,
@@ -43,15 +45,20 @@ async function getAvailableCoupon(token) {
   const now = new Date()
   const currentMonth = parseInt(format(now, 'yyyyMM'))
   const remainingCoupon = response.couponInfo[0].coupon
-    .filter((coupon) => parseInt(coupon.expire) >= currentMonth)
-    .reduce((sum, cur) => sum + cur.volume, 0)
+    .filter(
+      (coupon: { expire: string }) => parseInt(coupon.expire) >= currentMonth
+    )
+    .reduce((sum: number, cur: { volume: number }) => sum + cur.volume, 0)
 
   const couponUse = response.couponInfo[0].hdoInfo[0].couponUse
 
-  return { remainingCoupon, couponUse }
+  return { remainingCoupon, isCoupon: couponUse }
 }
 
-async function setCouponUseStatus(couponUse, { serviceCode, token }) {
+export async function setCouponUseStatus(
+  couponUse: boolean,
+  { serviceCode, token }: { serviceCode: string; token: string }
+) {
   const options = {
     couponInfo: [
       {
@@ -76,17 +83,9 @@ async function setCouponUseStatus(couponUse, { serviceCode, token }) {
   return response
 }
 
-async function calcDataCap(mioToken) {
-  const { remainingCoupon } = await getAvailableCoupon(mioToken)
+export async function calcDataCap(token: string) {
+  const { remainingCoupon } = await getAvailableCoupon(token)
   const remaining = remainingDays()
   const dataMbPerDay = Math.floor(remainingCoupon / remaining)
   return dataMbPerDay
-}
-
-module.exports = {
-  getAuthorizeURL,
-  getDataUsage,
-  getAvailableCoupon,
-  setCouponUseStatus,
-  calcDataCap,
 }

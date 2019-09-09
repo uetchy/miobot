@@ -2,18 +2,20 @@
   "name": "miobot",
   "version": "0.0.0",
   "author": "Yasuaki Uechi <y@uechi.io> (https://uechi.io/)",
-  "main": "src/server.js",
+  "main": "dist/server.js",
   "scripts": {
     "build": "run-p build:*",
+    "build:server": "tsc",
     "build:web": "yarn --cwd src/web build",
     "dev": "run-p dev:*",
-    "dev:server": "nodemon -w src --exec node src/server.js",
+    "dev:server": "nodemon -w dist --exec node dist/server.js",
+    "dev:tsc": "tsc -w",
     "dev:web": "PORT=5000 BROWSER=none yarn --cwd src/web start",
     "heroku-prebuild": "yarn --cwd src/web install",
-    "job": "node src/job.js",
+    "job": "node dist/job.js",
     "ngrok": "ngrok http 3000",
     "ship": "git push heroku master",
-    "start": "node src/server.js"
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "date-fns": "^2.1.0",
@@ -24,7 +26,16 @@
     "npm-run-all": "^4.1.5",
     "styled-components": "^4.3.2",
     "telegraf": "^3.32.0",
-    "telegraf-session-redis": "^5.1.0"
+    "telegraf-session-redis": "^5.1.0",
+    "typescript": "^3.6.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.1",
+    "@types/jsonwebtoken": "^8.3.3",
+    "@types/mongoose": "^5.5.17",
+    "@types/node": "^12.7.4",
+    "@types/node-fetch": "^2.5.0",
+    "telegram-typings": "^4.0.0-beta"
   },
   "license": "MIT"
 }

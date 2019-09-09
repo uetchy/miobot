@@ -1,45 +1,47 @@
-const assert = require('assert')
-const Telegraf = require('telegraf')
-const { startOfToday } = require('date-fns')
-const { getAvailableCoupon } = require('./core/mio')
+import assert from 'assert'
+import Telegraf from 'telegraf'
+import { startOfToday } from 'date-fns'
 
-const { calcDataCap, getDataUsage, setCouponUseStatus } = require('./core/mio')
-const { getAllUsers, closeConnection } = require('./core/database')
+import { calcDataCap, getDataUsage, setCouponUseStatus } from './core/mio'
+import {
+  getAllUsers,
+  closeConnection,
+  User,
+  UserDocument,
+} from './core/database'
 
 const CHECK_THRESHOLD_IN_SECONDS = 60
-const BOT_TOKEN = process.env.BOT_TOKEN
+const BOT_TOKEN = process.env.BOT_TOKEN!
 assert(BOT_TOKEN, 'BOT_TOKEN is missing')
 
-function sendMessage(userID, message) {
+function sendMessage(userID: number, message: string) {
   const app = new Telegraf(BOT_TOKEN)
   return app.telegram.sendMessage(userID, message)
 }
 
-function isTooManyRequest(lastCheck) {
-  const lastCheckInSeconds = Math.floor((Date.now() - lastCheck) / 1000)
+function isTooManyRequest(lastCheck: Date) {
+  const lastCheckInSeconds = Math.floor(
+    (Date.now() - lastCheck.getTime()) / 1000
+  )
   return lastCheckInSeconds < CHECK_THRESHOLD_IN_SECONDS
 }
 
-async function check(user) {
+async function check(user: UserDocument) {
   // check interval
   if (isTooManyRequest(user.lastCheck)) {
     throw new Error('too many request')
   }
-  user.lastCheck = Date.now()
+  user.lastCheck = new Date()
   await user.save()
 
   // check if data usage exceed maximum data cap
-  const { usage, serviceCode } = await getDataUsage(user.token)
+  const { usage } = await getDataUsage(user.token)
   if (usage > user.dataCap) {
-    // enable eco mode
-    const { couponUse } = await getAvailableCoupon(user.token)
-    console.log('couponUse', couponUse)
-
     // switch coupon and notify only if coupon switch is enabled
-    if (couponUse) {
+    if (user.isCoupon) {
       await setCouponUseStatus(false, {
         token: user.token,
-        serviceCode,
+        serviceCode: user.serviceCode,
       })
       await sendMessage(
         user.userID,
@@ -49,15 +51,15 @@ async function check(user) {
   }
 
   // recalc data caps and notify new value every day
-  if (startOfToday() > user.lastUpdate || !user.dataCap) {
+  if (startOfToday() > user.lastUpdate) {
     console.log('refresh datacap')
     user.dataCap = await calcDataCap(user.token)
-    user.lastUpdate = Date.now()
+    user.lastUpdate = new Date()
     await user.save()
 
     await setCouponUseStatus(true, {
       token: user.token,
-      serviceCode,
+      serviceCode: user.serviceCode,
     })
 
     await sendMessage(

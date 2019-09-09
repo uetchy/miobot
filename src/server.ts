@@ -1,6 +1,7 @@
-const express = require('express')
-const path = require('path')
-const bot = require('./bot')
+import express from 'express'
+import path from 'path'
+import { AddressInfo } from 'net'
+import bot from './bot'
 
 const PORT = process.env.PORT || 3000
 
@@ -16,7 +17,6 @@ app.get('*', (req, res) => {
 })
 
 const server = app.listen(PORT, () => {
-  console.log(
-    `Gateway running on ${server.address().address}:${server.address().port}`
-  )
+  const { port, address } = server.address() as AddressInfo
+  console.log(`Gateway running on ${address}:${port}`)
 })
