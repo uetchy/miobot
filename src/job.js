@@ -50,7 +50,8 @@ async function check(user) {
     })
     await sendMessage(
       user.userID,
-      `次の日になりました。本日の残量は ${user.dataCap} MBです`
+      `次の日になりました。本日の残量は ${user.dataCap} MBです`,
+      { disable_notification: true }
     )
   }
 

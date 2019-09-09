@@ -4,13 +4,6 @@ Automatic coupon switch for IIJ mio SIM.
 
 [Add Bot to Telegram](https://t.me/mio_autobot)
 
-```
-heroku create
-git push heroku master
-```
-
 ## Development
 
-```
-URL=https://<unique>.ngrok.io yarn dev
-```
+See [CONTRIBUTING](./CONTRIBUTING.md) for further information.
