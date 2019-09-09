@@ -7,7 +7,7 @@ const { getUser } = require('../core/database')
 const { getAvailableCoupon, getDataUsage } = require('../core/mio')
 
 // scenes
-const boostrapScene = require('./bootstrap')
+const boostrapScene = require('./scenes/bootstrap')
 
 const PORT = process.env.PORT || 3000
 const REDISCLOUD_URL = process.env.REDISCLOUD_URL || '127.0.0.1'
@@ -50,16 +50,16 @@ bot.start(async (ctx) => {
 bot.command('usage', async (ctx) => {
   ctx.webhookReply = false
   const userID = ctx.message.from.id
-  const botMessage = await ctx.reply('確認中🚀')
+  const botMessage = await ctx.reply('🚀')
   const user = await getUser(userID)
   if (user) {
     console.log(user)
-    const availableCoupon = await getAvailableCoupon(user.token)
+    const { remainingCoupon } = await getAvailableCoupon(user.token)
     const { usage } = await getDataUsage(user.token)
     const { dataCap } = user
     ctx.deleteMessage(botMessage.message_id)
     await ctx.reply(
-      `今日の使用量は ${usage} MBで、残量は ${dataCap} MBです。今月はあと ${availableCoupon} MB 使えます`
+      `本日の使用量は ${usage} MBで、データキャップは ${dataCap} MBです。今月は残り ${remainingCoupon} MB 使えます`
     )
   } else {
     ctx.deleteMessage(botMessage.message_id)

@@ -5,8 +5,8 @@ const addSeconds = require('date-fns/addSeconds')
 const differenceInSeconds = require('date-fns/differenceInSeconds')
 const assert = require('assert')
 
-const { getAuthorizeURL, calcDataCap } = require('../core/mio')
-const { createUser, getUser } = require('../core/database')
+const { getAuthorizeURL, calcDataCap } = require('../../core/mio')
+const { createUser, getUser } = require('../../core/database')
 
 const JWT_SECRET = process.env.JWT_SECRET
 const MIO_CALLBACK_URL = process.env.MIO_CALLBACK_URL
@@ -17,10 +17,10 @@ assert(MIO_CALLBACK_URL, 'MIO_CALLBACK_URL not specified')
 const bootstrap = new Scene('bootstrap')
 bootstrap.enter(async (ctx) => {
   ctx.webhookReply = false
-  const { id, username } = ctx.chat
-  const chat = await ctx.reply(`準備中🚀`)
+  const { id, first_name } = ctx.chat
+  const chat = await ctx.reply(`セットアップモード🚀`)
 
-  const state = jwt.sign({ id: id, username: username }, JWT_SECRET)
+  const state = jwt.sign({ id: id, username: first_name }, JWT_SECRET)
   const authURL = getAuthorizeURL(MIO_CALLBACK_URL, state)
   const button = inlineKeyboard([
     urlButton('IIJmioにログインする', authURL),
@@ -106,6 +106,8 @@ bootstrap.on('message', async (ctx) => {
     return ctx.scene.reenter()
   }
 })
+
+bootstrap.leave(({ reply }) => reply(`セットアップモードを終了します`))
 
 bootstrap.action('cancel', (ctx) => ctx.scene.leave())
 bootstrap.action('restart', (ctx) => ctx.scene.reenter())

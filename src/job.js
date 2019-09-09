@@ -1,7 +1,7 @@
-const express = require('express')
 const assert = require('assert')
 const Telegraf = require('telegraf')
 const { startOfToday } = require('date-fns')
+const { getAvailableCoupon } = require('./core/mio')
 
 const { calcDataCap, getDataUsage, setCouponUseStatus } = require('./core/mio')
 const { getAllUsers, closeConnection } = require('./core/database')
@@ -26,36 +26,45 @@ async function check(user) {
     throw new Error('too many request')
   }
   user.lastCheck = Date.now()
+  await user.save()
 
-  // check if today's data usage exceed data cap
+  // check if data usage exceed maximum data cap
   const { usage, serviceCode } = await getDataUsage(user.token)
   if (usage > user.dataCap) {
     // enable eco mode
-    console.log('enable eco mode')
-    await setCouponUseStatus(false, {
-      token: user.token,
-      serviceCode,
-    })
-    await sendMessage(user.userID, `エコモードを有効にしました`)
+    const { couponUse } = await getAvailableCoupon()
+    console.log('couponUse', couponUse)
+
+    // switch coupon and notify only if coupon switch is enabled
+    if (couponUse) {
+      await setCouponUseStatus(false, {
+        token: user.token,
+        serviceCode,
+      })
+      await sendMessage(
+        user.userID,
+        `エコモードを有効にしました☘️ 現時点での使用量は ${usage} MBです`
+      )
+    }
   }
 
-  // refresh data caps once per day
+  // recalc data caps and notify new value every day
   if (startOfToday() > user.lastUpdate || !user.dataCap) {
     console.log('refresh datacap')
     user.dataCap = await calcDataCap(user.token)
     user.lastUpdate = Date.now()
+    await user.save()
+
     await setCouponUseStatus(true, {
       token: user.token,
       serviceCode,
     })
+
     await sendMessage(
       user.userID,
-      `次の日になりました。本日の残量は ${user.dataCap} MBです`,
-      { disable_notification: true }
+      `次の日になりました。本日の残量は ${user.dataCap} MBです`
     )
   }
-
-  await user.save()
 }
 
 async function handler() {
@@ -66,7 +75,7 @@ async function handler() {
     try {
       await check(user)
     } catch (err) {
-      console.log(`Error(${user.userID}) ${err.message}`)
+      console.log(`Error(${user.username}) ${err.message}`)
       hasError = true
     }
   }

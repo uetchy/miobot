@@ -45,7 +45,9 @@ async function getAvailableCoupon(token) {
     .filter((coupon) => parseInt(coupon.expire) >= currentMonth)
     .reduce((sum, cur) => sum + cur.volume, 0)
 
-  return remainingCoupon
+  const couponUse = response.couponInfo[0].hdoInfo[0].couponUse
+
+  return { remainingCoupon, couponUse }
 }
 
 async function setCouponUseStatus(couponUse, { serviceCode, token }) {
@@ -74,9 +76,9 @@ async function setCouponUseStatus(couponUse, { serviceCode, token }) {
 }
 
 async function calcDataCap(mioToken) {
-  const availableCoupon = await getAvailableCoupon(mioToken)
+  const { remainingCoupon } = await getAvailableCoupon(mioToken)
   const remaining = remainingDays()
-  const dataMbPerDay = Math.floor(availableCoupon / remaining)
+  const dataMbPerDay = Math.floor(remainingCoupon / remaining)
   return dataMbPerDay
 }
 
