@@ -18,26 +18,24 @@ const bootstrap = new Scene('bootstrap')
 bootstrap.enter(async (ctx) => {
   ctx.webhookReply = false
   const { id, username } = ctx.chat
-  const chat = await ctx.reply(`Preparing`)
-
-  // reset user data for second time signup
-  const user = await getUser(id)
-  if (user) {
-    user.remove()
-  }
+  const chat = await ctx.reply(`準備中🚀`)
 
   const state = jwt.sign({ id: id, username: username }, JWT_SECRET)
   const authURL = getAuthorizeURL(MIO_CALLBACK_URL, state)
   const button = inlineKeyboard([
-    urlButton('Proceed to IIJmio', authURL),
+    urlButton('IIJmioにログインする', authURL),
   ]).extra()
 
   await ctx.deleteMessage(chat.message_id)
-  await ctx.reply('🚀 Login to IIJmio and paste token here', button)
+  await ctx.reply(
+    'IIJmioにログインして、手に入れたトークンをここに貼り付けてください',
+    button
+  )
 })
 
 bootstrap.on('message', async (ctx) => {
   const { message_id, text } = ctx.message
+  const chatID = ctx.chat.id
 
   // decompose token
   let userInfo = null
@@ -46,14 +44,14 @@ bootstrap.on('message', async (ctx) => {
     try {
       container = JSON.parse(Buffer.from(text, 'base64'))
     } catch (err) {
-      throw new Error('Invalid token.')
+      throw new Error('不正なトークン形式です😭')
     }
 
     let id_token = null
     try {
       id_token = jwt.verify(container.sig, JWT_SECRET)
     } catch (err) {
-      throw new Error('Invalid signature.')
+      throw new Error('不正な署名です😭')
     }
 
     const tokenChallengeIssuedAt = new Date(id_token.iat * 1000)
@@ -61,9 +59,8 @@ bootstrap.on('message', async (ctx) => {
     if (differenceInSeconds(Date.now(), tokenChallengeIssuedAt) > 5 * 60) {
     }
 
-    console.log(id_token, ctx.chat)
-    if (id_token.id !== ctx.chat.id) {
-      throw new Error('Invalid user id.')
+    if (id_token.id !== chatID) {
+      throw new Error('不正なユーザーIDです😭')
     }
 
     const tokenExpiresAt = addSeconds(Date.now(), container.exp)
@@ -75,26 +72,38 @@ bootstrap.on('message', async (ctx) => {
       tokenExpiresAt,
       dataCap: await calcDataCap(container.token),
     }
-    ctx.deleteMessage(message_id)
+
+    await ctx.deleteMessage(message_id)
   } catch (err) {
     const button = inlineKeyboard([
-      callbackButton('Start over', 'restart'),
-      callbackButton('Cancel', 'cancel'),
+      callbackButton('やり直す', 'restart'),
+      callbackButton('やめる', 'cancel'),
     ]).extra()
     return ctx.reply(err.message, button)
+  }
+
+  // reset user data for second time signup
+  try {
+    const user = await getUser(chatID)
+    if (user) {
+      await user.remove()
+    }
+  } catch (err) {
+    ctx.reply(`ユーザーデータの初期化に失敗しました😭`)
+    return ctx.scene.reenter()
   }
 
   // create user
   try {
     const user = await createUser(userInfo)
     console.log(user)
-    await ctx.reply(`Setup finished! Welcome, ${ctx.chat.first_name}.`)
-    await ctx.reply(`Try /usage`)
+    await ctx.reply(`準備完了！`)
+    await ctx.reply(`まずは /usage コマンドを試してください`)
     ctx.scene.leave()
   } catch (err) {
     console.log(err)
-    ctx.reply('Failed to create user. Try it again.')
-    ctx.scene.reenter()
+    ctx.reply(`サインアップに失敗しました😭`)
+    return ctx.scene.reenter()
   }
 })
 

@@ -22,7 +22,7 @@ function Callback() {
   )
   return (
     <Container>
-      <Title>Go back to the chat and paste following token</Title>
+      <Title>Telegramに戻って、以下のトークンを貼り付けてください。</Title>
       <TokenContainer>{result}</TokenContainer>
     </Container>
   )

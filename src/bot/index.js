@@ -22,9 +22,9 @@ assert(BOT_TOKEN, 'BOT_TOKEN is missing')
 assert(WEBHOOK_DOMAIN, 'WEBHOOK_DOMAIN is missing')
 
 const HELP = `
-/help - this message
-/start - configure IIJmio account
-/usage - show usage
+/help - このメッセージ
+/start - Botの初期セットアップ
+/usage - データ使用量の確認
 `
 
 // create scene manager
@@ -50,7 +50,7 @@ bot.start(async (ctx) => {
 bot.command('usage', async (ctx) => {
   ctx.webhookReply = false
   const userID = ctx.message.from.id
-  const botMessage = await ctx.reply('🚀 Fetching status')
+  const botMessage = await ctx.reply('確認中🚀')
   const user = await getUser(userID)
   if (user) {
     console.log(user)
@@ -59,11 +59,11 @@ bot.command('usage', async (ctx) => {
     const { dataCap } = user
     ctx.deleteMessage(botMessage.message_id)
     await ctx.reply(
-      `${usage} MB / ${dataCap} MB used today. ${availableCoupon} MB is available this month.`
+      `今日の使用量は ${usage} MBで、残量は ${dataCap} MBです。今月はあと ${availableCoupon} MB 使えます`
     )
   } else {
     ctx.deleteMessage(botMessage.message_id)
-    ctx.reply('User not found. /start first.')
+    ctx.reply('まずは /start してセットアップしましょう')
   }
 })
 
@@ -73,5 +73,4 @@ bot.on('message', ({ reply }) => reply(HELP))
 bot.help(({ reply }) => reply(HELP))
 
 bot.telegram.setWebhook(`https://${WEBHOOK_DOMAIN}/bot${API_SECRET}`)
-
 module.exports = bot.webhookCallback(`/bot${API_SECRET}`, null, PORT)

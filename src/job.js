@@ -36,7 +36,7 @@ async function check(user) {
       token: user.token,
       serviceCode,
     })
-    await sendMessage(user.userID, `Eco mode is enabled from now on.`)
+    await sendMessage(user.userID, `エコモードを有効にしました`)
   }
 
   // refresh data caps once per day
@@ -48,7 +48,10 @@ async function check(user) {
       token: user.token,
       serviceCode,
     })
-    await sendMessage(user.userID, `Today's data cap is ${user.dataCap} MB`)
+    await sendMessage(
+      user.userID,
+      `次の日になりました。本日の残量は ${user.dataCap} MBです`
+    )
   }
 
   await user.save()
