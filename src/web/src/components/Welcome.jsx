@@ -4,7 +4,7 @@ import styled from 'styled-components'
 export default function Welcome() {
   return (
     <Container>
-      <h1>Miobot</h1>
+      <h1>miobot</h1>
       <a href="https://t.me/mio_autobot">
         <img
           src="https://img.shields.io/badge/add_to-Telegram-2CA5E0?logo=telegram&style=flat-square"
