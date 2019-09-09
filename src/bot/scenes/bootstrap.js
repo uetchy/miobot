@@ -18,7 +18,6 @@ const bootstrap = new Scene('bootstrap')
 bootstrap.enter(async (ctx) => {
   ctx.webhookReply = false
   const { id, first_name } = ctx.chat
-  const chat = await ctx.reply(`セットアップモード🚀`)
 
   const state = jwt.sign({ id: id, username: first_name }, JWT_SECRET)
   const authURL = getAuthorizeURL(MIO_CALLBACK_URL, state)
@@ -26,7 +25,6 @@ bootstrap.enter(async (ctx) => {
     urlButton('IIJmioにログインする', authURL),
   ]).extra()
 
-  await ctx.deleteMessage(chat.message_id)
   await ctx.reply(
     'IIJmioにログインして、手に入れたトークンをここに貼り付けてください',
     button

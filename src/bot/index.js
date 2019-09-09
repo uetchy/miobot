@@ -50,7 +50,7 @@ bot.start(async (ctx) => {
 bot.command('usage', async (ctx) => {
   ctx.webhookReply = false
   const userID = ctx.message.from.id
-  const botMessage = await ctx.reply('🚀')
+  const botMessage = await ctx.reply('確認しています🚀')
   const user = await getUser(userID)
   if (user) {
     console.log(user)
