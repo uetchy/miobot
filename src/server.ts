@@ -11,9 +11,9 @@ const app = express()
 app.use(bot)
 
 // web
-app.use(express.static(path.join(__dirname, '/web/build')))
+app.use(express.static(path.join(__dirname, '../src/web/build')))
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname + '/web/build/index.html'))
+  res.sendFile(path.join(__dirname + '../src/web/build/index.html'))
 })
 
 const server = app.listen(PORT, () => {
