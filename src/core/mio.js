@@ -20,6 +20,7 @@ async function getDataUsage(token) {
       },
     }
   ).then((res) => res.json())
+
   const serviceCode = response.packetLogInfo[0].hdoInfo[0].hdoServiceCode
   const usage = response.packetLogInfo[0].hdoInfo[0].packetLog.slice(-1)[0]
     .withCoupon

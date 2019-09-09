@@ -32,7 +32,7 @@ async function check(user) {
   const { usage, serviceCode } = await getDataUsage(user.token)
   if (usage > user.dataCap) {
     // enable eco mode
-    const { couponUse } = await getAvailableCoupon()
+    const { couponUse } = await getAvailableCoupon(user.token)
     console.log('couponUse', couponUse)
 
     // switch coupon and notify only if coupon switch is enabled
@@ -75,7 +75,8 @@ async function handler() {
     try {
       await check(user)
     } catch (err) {
-      console.log(`Error(${user.username}) ${err.message}`)
+      console.log(`Error(${user.username}):`)
+      console.log(err)
       hasError = true
     }
   }
