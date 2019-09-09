@@ -2,13 +2,13 @@ import assert from 'assert'
 import Telegraf from 'telegraf'
 import { startOfToday } from 'date-fns'
 
-import { calcDataCap, getDataUsage, setCouponUseStatus } from './core/mio'
 import {
-  getAllUsers,
-  closeConnection,
-  User,
-  UserDocument,
-} from './core/database'
+  calcDataCap,
+  getDataUsage,
+  setCouponUseStatus,
+  getAvailableCoupon,
+} from './core/mio'
+import { getAllUsers, closeConnection, UserDocument } from './core/database'
 
 const CHECK_THRESHOLD_IN_SECONDS = 60
 const BOT_TOKEN = process.env.BOT_TOKEN!
@@ -26,16 +26,19 @@ function isTooManyRequest(lastCheck: Date) {
   return lastCheckInSeconds < CHECK_THRESHOLD_IN_SECONDS
 }
 
-async function check(user: UserDocument) {
+async function handleUser(user: UserDocument) {
   // check interval
   if (isTooManyRequest(user.lastCheck)) {
     throw new Error('too many request')
   }
-  user.lastCheck = new Date()
-  await user.save()
+
+  await user.updateOne({
+    lastCheck: new Date(),
+  })
 
   // check if data usage exceed maximum data cap
   const { usage } = await getDataUsage(user.token)
+
   if (usage > user.dataCap) {
     // switch coupon and notify only if coupon switch is enabled
     if (user.isCoupon) {
@@ -43,6 +46,7 @@ async function check(user: UserDocument) {
         token: user.token,
         serviceCode: user.serviceCode,
       })
+
       await sendMessage(
         user.userID,
         `エコモードを有効にしました☘️ 現時点での使用量は ${usage} MBです`
@@ -52,19 +56,25 @@ async function check(user: UserDocument) {
 
   // recalc data caps and notify new value every day
   if (startOfToday() > user.lastUpdate) {
-    console.log('refresh datacap')
-    user.dataCap = await calcDataCap(user.token)
-    user.lastUpdate = new Date()
-    await user.save()
+    const { remainingCoupon, isCoupon } = await getAvailableCoupon(user.token)
+    const newDataCap = calcDataCap(remainingCoupon)
 
-    await setCouponUseStatus(true, {
-      token: user.token,
-      serviceCode: user.serviceCode,
+    if (!isCoupon) {
+      await setCouponUseStatus(true, {
+        token: user.token,
+        serviceCode: user.serviceCode,
+      })
+    }
+
+    await user.updateOne({
+      dataCap: newDataCap,
+      lastUpdate: new Date(),
+      isCoupon: true,
     })
 
     await sendMessage(
       user.userID,
-      `次の日になりました。本日の残量は ${user.dataCap} MBです`
+      `次の日になりました。本日の残量は ${newDataCap} MBです`
     )
   }
 }
@@ -75,7 +85,7 @@ async function handler() {
   let hasError = false
   for (const user of users) {
     try {
-      await check(user)
+      await handleUser(user)
     } catch (err) {
       console.log(`Error(${user.username}):`)
       console.log(err)

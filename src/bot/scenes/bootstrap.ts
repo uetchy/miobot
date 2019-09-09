@@ -15,10 +15,10 @@ import { createUser, getUser, User } from '../../core/database'
 import { Context } from 'telegraf'
 
 // config vars
-const JWT_SECRET = process.env.JWT_SECRET!
-const MIO_CALLBACK_URL = process.env.MIO_CALLBACK_URL!
 const CHALLENGE_EXPIRES_IN = 3 * 60
 
+const JWT_SECRET = process.env.JWT_SECRET!
+const MIO_CALLBACK_URL = process.env.MIO_CALLBACK_URL!
 assert(JWT_SECRET, 'JWT_SECRET is missing')
 assert(MIO_CALLBACK_URL, 'MIO_CALLBACK_URL is missing')
 
@@ -44,14 +44,18 @@ async function verifyToken(text: string, userID: number): Promise<User> {
     throw new Error('不正なトークン形式です😭')
   }
 
+  const { token, sig, exp } = container
+
   let id_token: JwtToken | null = null
   try {
-    id_token = jwt.verify(container.sig, JWT_SECRET) as JwtToken
+    id_token = jwt.verify(sig, JWT_SECRET) as JwtToken
   } catch (err) {
     throw new Error('不正な署名です😭')
   }
 
-  const tokenChallengeIssuedAt = new Date(id_token.iat * 1000)
+  const { id, username, iat } = id_token
+
+  const tokenChallengeIssuedAt = new Date(iat * 1000)
   console.log(differenceInSeconds(Date.now(), tokenChallengeIssuedAt))
   if (
     differenceInSeconds(Date.now(), tokenChallengeIssuedAt) >
@@ -60,22 +64,23 @@ async function verifyToken(text: string, userID: number): Promise<User> {
     throw new Error('トークンの有効期限が切れています😭')
   }
 
-  if (id_token.id !== userID) {
+  if (id !== userID) {
     throw new Error('不正なユーザーIDです😭')
   }
 
-  const tokenExpiresAt = addSeconds(Date.now(), container.exp)
-  const { serviceCode } = await getDataUsage(container.token)
-  const { isCoupon } = await getAvailableCoupon(container.token)
+  const tokenExpiresAt = addSeconds(Date.now(), exp)
+  const { serviceCode } = await getDataUsage(token)
+  const { isCoupon, remainingCoupon } = await getAvailableCoupon(token)
+  const dataCap = calcDataCap(remainingCoupon)
 
   return {
-    userID: id_token.id,
-    username: id_token.username,
-    token: container.token,
+    userID,
+    token,
+    username,
     tokenExpiresAt,
     serviceCode,
     isCoupon,
-    dataCap: await calcDataCap(container.token),
+    dataCap,
     lastCheck: new Date(),
     lastUpdate: new Date(),
   }
@@ -89,13 +94,14 @@ bootstrap.enter(async (ctx: Context) => {
 
   const state = jwt.sign({ id: id, username: first_name }, JWT_SECRET)
   const authURL = getAuthorizeURL(MIO_CALLBACK_URL, state)
-  const button = inlineKeyboard([
-    urlButton('IIJmioにログインする', authURL),
+  const panel = inlineKeyboard([
+    urlButton('ログイン', authURL),
+    callbackButton('中止', 'cancel'),
   ]).extra()
 
   await ctx.reply(
     'IIJmioにログインして、手に入れたトークンをここに貼り付けてください',
-    button
+    panel
   )
 })
 
@@ -103,41 +109,40 @@ bootstrap.on('message', async (ctx: Context) => {
   const { message_id, text } = ctx.message
   const userID = ctx.chat.id
 
-  // verify token
-  let userInfo: User | null = null
   try {
-    userInfo = (await verifyToken(text, userID)) as User
-    await ctx.deleteMessage(message_id)
-  } catch (err) {
-    const button = inlineKeyboard([
-      callbackButton('再発行', 'restart'),
-      callbackButton('中止', 'cancel'),
-    ]).extra()
-    return ctx.reply(err.message, button)
-  }
+    // verify token
+    let userInfo: User | null = null
+    try {
+      userInfo = (await verifyToken(text, userID)) as User
+      await ctx.deleteMessage(message_id)
+    } catch (err) {
+      throw new Error(err.message)
+    }
 
-  // reset user data
-  try {
-    const user = await getUser(userID)
-    if (user) {
-      await user.remove()
+    // reset user data
+    try {
+      const user = await getUser(userID)
+      if (user) {
+        await user.remove()
+      }
+    } catch (err) {
+      throw new Error(`ユーザーデータの初期化に失敗しました😭`)
+    }
+
+    // create user
+    try {
+      await createUser(userInfo)
+      await ctx.reply(`こんにちは、${userInfo.username}`)
+      await ctx.reply(
+        `まずは /usage コマンドを試してください。 /help でヘルプを表示します`
+      )
+      return ctx.scene.leave()
+    } catch (err) {
+      console.log(err)
+      throw new Error(`ユーザー作成に失敗しました😭`)
     }
   } catch (err) {
-    ctx.reply(`ユーザーデータの初期化に失敗しました😭`)
-    return ctx.scene.reenter()
-  }
-
-  // create user
-  try {
-    await createUser(userInfo)
-    await ctx.reply(`こんにちは、${userInfo.username}`)
-    await ctx.reply(
-      `まずは /usage コマンドを試してください。 /help でヘルプを表示します`
-    )
-    return ctx.scene.leave()
-  } catch (err) {
-    console.log(err)
-    ctx.reply(`サインアップに失敗しました😭`)
+    await ctx.reply(err.message)
     return ctx.scene.reenter()
   }
 })

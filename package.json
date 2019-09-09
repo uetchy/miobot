@@ -34,8 +34,7 @@
     "@types/jsonwebtoken": "^8.3.3",
     "@types/mongoose": "^5.5.17",
     "@types/node": "^12.7.4",
-    "@types/node-fetch": "^2.5.0",
-    "telegram-typings": "^4.0.0-beta"
+    "@types/node-fetch": "^2.5.0"
   },
   "license": "MIT"
 }

@@ -83,8 +83,7 @@ export async function setCouponUseStatus(
   return response
 }
 
-export async function calcDataCap(token: string) {
-  const { remainingCoupon } = await getAvailableCoupon(token)
+export function calcDataCap(remainingCoupon: number) {
   const remaining = remainingDays()
   const dataMbPerDay = Math.floor(remainingCoupon / remaining)
   return dataMbPerDay

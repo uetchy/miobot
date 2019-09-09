@@ -2,7 +2,6 @@ import Telegraf from 'telegraf'
 import Stage from 'telegraf/stage'
 import { inlineKeyboard, callbackButton } from 'telegraf/markup'
 import RedisSession from 'telegraf-session-redis'
-import assert from 'assert'
 import { Context } from 'telegraf'
 
 import {
@@ -11,6 +10,8 @@ import {
   setCouponUseStatus,
 } from '../core/mio'
 import * as database from '../core/database'
+
+import boostrapScene from './scenes/bootstrap'
 
 async function getUser(ctx: Context) {
   const user = await database.getUser(ctx.chat.id)
@@ -21,17 +22,16 @@ async function getUser(ctx: Context) {
   }
 }
 
-// scenes
-import boostrapScene from './scenes/bootstrap'
+interface BotOption {
+  port: number | string
+  apiSecret: string
+  botToken: string
+  webhookURL: string
+  redisURL: string
+}
 
-// config vars
-const PORT = process.env.PORT || 3000
-const REDISCLOUD_URL = process.env.REDISCLOUD_URL || '127.0.0.1'
-const API_SECRET = process.env.API_SECRET!
-const JWT_SECRET = process.env.JWT_SECRET!
-const BOT_TOKEN = process.env.BOT_TOKEN!
-const WEBHOOK_DOMAIN = process.env.WEBHOOK_DOMAIN!
-const HELP = `
+function createBot(options: BotOption) {
+  const HELP = `
 /usage - データ使用量の確認
 /switch - クーポンスイッチ
 /help - ヘルプの表示
@@ -39,91 +39,107 @@ const HELP = `
 /start - Botの有効化
 `
 
-assert(REDISCLOUD_URL, 'REDISCLOUD_URL is missing')
-assert(API_SECRET, 'API_SECRET is missing')
-assert(JWT_SECRET, 'JWT_SECRET is missing')
-assert(BOT_TOKEN, 'BOT_TOKEN is missing')
-assert(WEBHOOK_DOMAIN, 'WEBHOOK_DOMAIN is missing')
+  // create scene manager
+  const stage = new Stage()
 
-// create scene manager
-const stage = new Stage()
+  stage.command('cancel', Stage.leave())
+  stage.register(boostrapScene)
 
-stage.command('cancel', Stage.leave())
-stage.register(boostrapScene)
+  // session
+  const session = new RedisSession({
+    store: {
+      url: options.redisURL,
+      host: '',
+      port: '',
+    },
+  })
 
-const session = new RedisSession({
-  store: {
-    url: REDISCLOUD_URL,
-    host: '',
-    port: '',
-  },
-})
+  // create bot
+  const bot = new Telegraf(options.botToken)
+  bot.use(session)
+  bot.use(stage.middleware())
+  bot.start(async (ctx) => {
+    ctx.scene.enter('bootstrap')
+  })
 
-// create bot
-const bot = new Telegraf(BOT_TOKEN)
-bot.use(session)
-bot.use(stage.middleware())
-bot.start(async (ctx) => {
-  ctx.scene.enter('bootstrap')
-})
+  // show usage
+  bot.command('usage', async (ctx) => {
+    ctx.webhookReply = false
 
-// show usage
-bot.command('usage', async (ctx) => {
-  ctx.webhookReply = false
+    const botMessage = await ctx.reply('確認しています🚀')
 
-  const botMessage = await ctx.reply('確認しています🚀')
+    const user = await getUser(ctx)
+    if (user) {
+      const { token, dataCap } = user
+      const { remainingCoupon, isCoupon } = await getAvailableCoupon(token)
+      const { usage } = await getDataUsage(token)
 
-  const user = await getUser(ctx)
-  if (user) {
-    const { token, dataCap } = user
-    const { remainingCoupon } = await getAvailableCoupon(token)
-    const { usage } = await getDataUsage(token)
+      ctx.deleteMessage(botMessage.message_id)
 
-    ctx.deleteMessage(botMessage.message_id)
+      await ctx.reply(
+        `本日の使用量は ${usage} MBで、データキャップは ${dataCap} MBです。今月の残量は ${remainingCoupon} MB です`
+      )
+      await ctx.reply(
+        `本日は、あと ${Math.max(0, dataCap - usage)} MB 使えます`
+      )
 
-    await ctx.reply(
-      `本日の使用量は ${usage} MBで、データキャップは ${dataCap} MBです。今月の残量は ${remainingCoupon} MB です`
-    )
-    await ctx.reply(`本日は、あと ${Math.max(0, dataCap - usage)} MB 使えます`)
-  } else {
-    ctx.deleteMessage(botMessage.message_id)
-    ctx.reply('まずは /start してセットアップしましょう')
-  }
-})
+      await user.updateOne({ isCoupon })
+    } else {
+      ctx.deleteMessage(botMessage.message_id)
+      ctx.reply('まずは /start してセットアップしましょう')
+    }
+  })
 
-bot.command('switch', async (ctx) => {
-  const { isCoupon } = await getUser(ctx)
-  const panel = inlineKeyboard([
-    callbackButton('ON', 'couponOn'),
-    callbackButton('OFF', 'couponOff'),
-  ]).extra()
-  await ctx.reply(`エコモード ${isCoupon ? 'OFF' : 'ON'}`, panel)
-})
+  // coupon switch
+  bot.command('switch', async (ctx) => {
+    const { isCoupon } = await getUser(ctx)
+    const panel = inlineKeyboard([
+      callbackButton('ON', 'couponOn'),
+      callbackButton('OFF', 'couponOff'),
+    ]).extra()
+    await ctx.reply(`クーポンスイッチ ${isCoupon ? 'ON' : 'OFF'}`, panel)
+  })
 
-bot.action('couponOn', async (ctx) => {
-  const { token, serviceCode } = await getUser(ctx)
-  await setCouponUseStatus(true, { serviceCode: serviceCode, token })
-  await ctx.reply(`クーポンスイッチをオンにしました`)
-})
+  // enable coupon
+  bot.action('couponOn', async (ctx) => {
+    const user = await getUser(ctx)
+    await setCouponUseStatus(true, {
+      serviceCode: user.serviceCode,
+      token: user.token,
+    })
+    await ctx.reply(`クーポンスイッチをオンにしました`)
+    await user.updateOne({ isCoupon: true })
+  })
 
-bot.action('couponOff', async (ctx) => {
-  const { token, serviceCode } = await getUser(ctx)
-  await setCouponUseStatus(false, { serviceCode: serviceCode, token })
-  await ctx.reply(`クーポンスイッチをオフにしました`)
-})
+  // disable coupon
+  bot.action('couponOff', async (ctx) => {
+    const user = await getUser(ctx)
+    await setCouponUseStatus(false, {
+      serviceCode: user.serviceCode,
+      token: user.token,
+    })
+    await ctx.reply(`クーポンスイッチをオフにしました`)
+    await user.updateOne({ isCoupon: false })
+  })
 
-bot.command('deactivate', async (ctx) => {
-  await ctx.reply(`データの紐付けを解消します`)
-  const user = await getUser(ctx)
-  await user.remove()
-  await ctx.reply(`完了しました。さようなら！ /start で再開できます`)
-})
+  // deactivate account
+  bot.command('deactivate', async (ctx) => {
+    await ctx.reply(`データの紐付けを解消します`)
+    const user = await getUser(ctx)
+    await user.remove()
+    await ctx.reply(`完了しました。さようなら！ /start で再開できます`)
+  })
 
-bot.on('message', ({ reply }) => reply(HELP))
+  // show help
+  bot.on('message', ({ reply }) => reply(HELP))
 
-// show help
-bot.help(({ reply }) => reply(HELP))
+  // show help
+  bot.help(({ reply }) => reply(HELP))
 
-// export webhook handler
-bot.telegram.setWebhook(`https://${WEBHOOK_DOMAIN}/bot${API_SECRET}`)
-export default bot.webhookCallback(`/bot${API_SECRET}`, null, PORT)
+  // export webhook handler
+  bot.telegram.setWebhook(`${options.webhookURL}/bot${options.apiSecret}`)
+
+  return bot.webhookCallback(`/bot${options.apiSecret}`, null, options.port)
+}
+
+export default createBot
