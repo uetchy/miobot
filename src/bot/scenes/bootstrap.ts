@@ -69,7 +69,7 @@ async function verifyToken(text: string, userID: number): Promise<User> {
   }
 
   const tokenExpiresAt = addSeconds(Date.now(), exp)
-  const { serviceCode } = await getDataUsage(token)
+  const { usage, serviceCode } = await getDataUsage(token)
   const { isCoupon, remainingCoupon } = await getAvailableCoupon(token)
   const dataCap = calcDataCap(remainingCoupon)
 
@@ -81,6 +81,8 @@ async function verifyToken(text: string, userID: number): Promise<User> {
     serviceCode,
     isCoupon,
     dataCap,
+    usage,
+    autoSwitch: true,
     lastCheck: new Date(),
     lastUpdate: new Date(),
   }

@@ -13,6 +13,8 @@ export interface User {
   serviceCode: string
   isCoupon: boolean
   dataCap: number
+  usage: number
+  autoSwitch: boolean
   lastUpdate: Date
   lastCheck: Date
 }
@@ -39,7 +41,9 @@ export async function connectToDatabase() {
       tokenExpiresAt: Date,
       serviceCode: String,
       isCoupon: { type: Boolean, default: false },
+      autoSwitch: { type: Boolean, default: true },
       dataCap: Number,
+      usage: Number,
       lastUpdate: { type: Date, default: Date.now() }, // last time dataCap is calculated
       lastCheck: { type: Date, default: Date.now() }, // last time periodic job is invoked
     })
