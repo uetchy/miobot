@@ -29,7 +29,8 @@ interface BotOption {
 function createBot(options: BotOption) {
   const HELP = `
 /usage - データ使用量の確認
-/switch - クーポンスイッチ
+/coupon - クーポンスイッチ
+/autoswitch - 自動スイッチ設定
 /help - ヘルプの表示
 /bye - Botの無効化
 /start - Botの有効化
@@ -86,29 +87,23 @@ function createBot(options: BotOption) {
   })
 
   // coupon switch
-  bot.command('switch', async (ctx) => {
-    const { isCoupon, autoSwitch } = await getUser(ctx)
+  bot.command('coupon', async (ctx) => {
+    const { isCoupon } = await getUser(ctx)
     const panel = inlineKeyboard([
-      callbackButton('ON', 'couponAndSwitchOn'),
+      callbackButton('ON', 'couponOn'),
       callbackButton('OFF', 'couponOff'),
-      callbackButton('OFF (永続的)', 'couponAndSwitchOff'),
     ]).extra()
-    await ctx.reply(
-      `クーポンスイッチ: ${
-        isCoupon ? 'ON' : autoSwitch ? 'OFF' : '永続的にOFF'
-      }`,
-      panel
-    )
+    await ctx.reply(`クーポンスイッチ: ${isCoupon ? 'ON' : 'OFF'}`, panel)
   })
 
   // enable coupon
-  bot.action('couponAndSwitchOn', async (ctx) => {
+  bot.action('couponOn', async (ctx) => {
     const user = await getUser(ctx)
     await setCouponUseStatus(true, {
       serviceCode: user.serviceCode,
       token: user.token,
     })
-    await user.updateOne({ isCoupon: true, autoSwitch: true })
+    await user.updateOne({ isCoupon: true })
     await ctx.reply(`クーポンスイッチをオンにしました`)
   })
 
@@ -123,16 +118,31 @@ function createBot(options: BotOption) {
     await ctx.reply(`クーポンスイッチをオフにしました`)
   })
 
-  // disable coupon and autoswitch
-  bot.action('couponAndSwitchOff', async (ctx) => {
+  // auto switch config
+  bot.command('autoswitch', async (ctx) => {
+    const { autoSwitch } = await getUser(ctx)
+    const panel = inlineKeyboard([
+      callbackButton('ON', 'autoSwitchOn'),
+      callbackButton('OFF', 'autoSwitchOff'),
+    ]).extra()
+    await ctx.reply(`自動スイッチ: ${autoSwitch ? 'ON' : 'OFF'}`, panel)
+  })
+
+  // enable autoSwitch
+  bot.action('autoSwitchOn', async (ctx) => {
     const user = await getUser(ctx)
-    await setCouponUseStatus(false, {
-      serviceCode: user.serviceCode,
-      token: user.token,
-    })
-    await user.updateOne({ isCoupon: false, autoSwitch: false })
+    await user.updateOne({ autoSwitch: true })
     await ctx.reply(
-      `クーポンスイッチをオフにしました。自動でオンにはなりません`
+      `自動スイッチをオンにしました。クーポンスイッチは自動で操作されます`
+    )
+  })
+
+  // disable autoSwitch
+  bot.action('autoSwitchOff', async (ctx) => {
+    const user = await getUser(ctx)
+    await user.updateOne({ autoSwitch: false })
+    await ctx.reply(
+      `自動スイッチをオフにしました。クーポンスイッチは自動で操作されません`
     )
   })
 

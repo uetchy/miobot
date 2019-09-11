@@ -40,21 +40,19 @@ async function handleUser(user: UserDocument) {
   user.isCoupon = isCoupon
 
   // check if data usage exceed maximum data cap
-  if (usage > user.dataCap) {
-    // switch coupon and notify only if coupon switch is enabled
-    if (user.isCoupon) {
-      console.log('eco on')
-      await mio.setCouponUseStatus(false, {
-        token: token,
-        serviceCode: user.serviceCode,
-      })
-      user.isCoupon = false
+  // and switch coupon only if coupon switch is enabled
+  if (usage > user.dataCap && isCoupon && user.autoSwitch) {
+    console.log('eco on')
+    await mio.setCouponUseStatus(false, {
+      token: token,
+      serviceCode: user.serviceCode,
+    })
+    user.isCoupon = false
 
-      sendMessage(
-        user.userID,
-        `エコモードを有効にしました☘️ 現時点での使用量は ${usage} MB / ${user.dataCap} MBです`
-      )
-    }
+    await sendMessage(
+      user.userID,
+      `エコモードを有効にしました☘️ 現時点での使用量は ${usage} MB / ${user.dataCap} MBです`
+    )
   }
 
   // recalc data caps and notify new value every day
@@ -75,7 +73,7 @@ async function handleUser(user: UserDocument) {
 
     await sendMessage(
       user.userID,
-      `次の日になりました。昨日の使用実績は ${user.usage} MBです。本日の残量は ${newDataCap} MBです`
+      `次の日になりました。昨日の使用実績は ${usage} MBです。本日の残量は ${newDataCap} MBです`
     )
 
     if (!isCoupon) {
@@ -87,11 +85,11 @@ async function handleUser(user: UserDocument) {
         })
         user.isCoupon = true
 
-        sendMessage(user.userID, `エコモードをOFFにしました`)
+        await sendMessage(user.userID, `エコモードをOFFにしました`)
       } else {
         user.isCoupon = false
 
-        sendMessage(
+        await sendMessage(
           user.userID,
           `自動スイッチが無効化されているため、エコモードを継続します`
         )
