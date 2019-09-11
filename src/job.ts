@@ -1,6 +1,6 @@
 import assert from 'assert'
 import Telegraf from 'telegraf'
-import { startOfToday, addHours } from 'date-fns'
+import { startOfToday } from 'date-fns'
 
 import {
   calcDataCap,
@@ -27,86 +27,88 @@ function isTooManyRequest(lastCheck: Date) {
 }
 
 async function handleUser(user: UserDocument) {
+  const { token } = user
+
   // check interval
   if (isTooManyRequest(user.lastCheck)) {
     throw new Error('too many request')
   }
+  user.lastCheck = new Date()
 
-  await user.updateOne({
-    lastCheck: new Date(),
-  })
+  const { usage, serviceCode } = await getDataUsage(token)
+  user.usage = usage
+  user.serviceCode = serviceCode
+
+  const { remainingCoupon, isCoupon } = await getAvailableCoupon(token)
+  user.remainingCoupon = remainingCoupon
+  user.isCoupon = isCoupon
 
   // check if data usage exceed maximum data cap
-  const { usage } = await getDataUsage(user.token)
-  user.usage = usage
-
   if (usage > user.dataCap) {
-    console.log('data exceeded')
-
     // switch coupon and notify only if coupon switch is enabled
     if (user.isCoupon) {
       console.log('eco on')
       await setCouponUseStatus(false, {
-        token: user.token,
+        token: token,
         serviceCode: user.serviceCode,
       })
-
-      await sendMessage(
+      sendMessage(
         user.userID,
-        `エコモードを有効にしました☘️ 現時点での使用量は ${usage} MBです`
+        `エコモードを有効にしました☘️ 現時点での使用量は ${usage} MB / ${user.dataCap} MBです`
       )
     }
   }
 
   // recalc data caps and notify new value every day
-  const sotUTC = startOfToday()
-  const tzOffset = new Date().getTimezoneOffset() / -60
-  const sotJST = addHours(sotUTC, tzOffset)
+  const sot = startOfToday()
 
   console.log('TZ', process.env.TZ)
-  console.log('offset', tzOffset)
-  console.log('sotUTC', sotUTC)
-  console.log('sotJST', sotJST)
   console.log('lastUpdate', user.lastUpdate)
+  console.log('now', new Date())
+  console.log('sot', sot)
+  console.log('now Locale', new Date().toLocaleString())
+  console.log('lastUpdate Locale', user.lastUpdate.toLocaleString())
+  console.log('sot Locale', sot.toLocaleString())
   console.log(
-    'sotJST - lastUpdate / 1000 / 60',
-    (sotJST.getTime() - user.lastUpdate.getTime()) / 1000 / 60
+    'sot - lastUpdate in hours',
+    (sot.getTime() - user.lastUpdate.getTime()) / 1000 / 60 / 60
   )
   console.log(
-    'sotUTC - lastUpdate / 1000 / 60',
-    (sotUTC.getTime() - user.lastUpdate.getTime()) / 1000 / 60
+    'time since today starts',
+    (Date.now() - sot.getTime()) / 1000 / 60 / 60
   )
 
-  if (sotUTC > user.lastUpdate) {
+  if (sot > user.lastUpdate) {
     console.log('new day coming')
-    const { remainingCoupon, isCoupon } = await getAvailableCoupon(user.token)
     const newDataCap = calcDataCap(remainingCoupon)
     user.dataCap = newDataCap
+    user.lastUpdate = new Date()
 
     await sendMessage(
       user.userID,
       `次の日になりました。昨日の使用実績は ${user.usage} MBです。本日の残量は ${newDataCap} MBです`
     )
 
-    if (!isCoupon && user.autoSwitch) {
-      console.log('eco off')
-      await setCouponUseStatus(true, {
-        token: user.token,
-        serviceCode: user.serviceCode,
-      })
-      await sendMessage(user.userID, `エコモードをOFFにしました`)
-      user.isCoupon = true
-    } else if (!user.autoSwitch) {
-      await sendMessage(
-        user.userID,
-        `自動スイッチが無効化されているため、エコモードを継続します`
-      )
-      user.isCoupon = false
+    if (!isCoupon) {
+      if (user.autoSwitch) {
+        console.log('eco off')
+        await setCouponUseStatus(true, {
+          token,
+          serviceCode,
+        })
+        user.isCoupon = true
+        sendMessage(user.userID, `エコモードをOFFにしました`)
+      } else {
+        user.isCoupon = false
+        sendMessage(
+          user.userID,
+          `自動スイッチが無効化されているため、エコモードを継続します`
+        )
+      }
     }
-
-    user.lastUpdate = new Date()
-    await user.save()
   }
+
+  await user.save()
 }
 
 async function handler() {

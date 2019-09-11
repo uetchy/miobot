@@ -80,6 +80,7 @@ async function verifyToken(text: string, userID: number): Promise<User> {
     tokenExpiresAt,
     serviceCode,
     isCoupon,
+    remainingCoupon,
     dataCap,
     usage,
     autoSwitch: true,

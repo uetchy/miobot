@@ -4,11 +4,7 @@ import { inlineKeyboard, callbackButton } from 'telegraf/markup'
 import RedisSession from 'telegraf-session-redis'
 import { Context } from 'telegraf'
 
-import {
-  getAvailableCoupon,
-  getDataUsage,
-  setCouponUseStatus,
-} from '../core/mio'
+import { setCouponUseStatus } from '../core/mio'
 import * as database from '../core/database'
 
 import boostrapScene from './scenes/bootstrap'
@@ -70,9 +66,7 @@ function createBot(options: BotOption) {
 
     const user = await getUser(ctx)
     if (user) {
-      const { token, dataCap } = user
-      const { remainingCoupon, isCoupon } = await getAvailableCoupon(token)
-      const { usage } = await getDataUsage(token)
+      const { dataCap, remainingCoupon, isCoupon, usage } = user
 
       ctx.deleteMessage(botMessage.message_id)
 
