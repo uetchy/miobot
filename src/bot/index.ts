@@ -35,7 +35,7 @@ function createBot(options: BotOption) {
 /usage - データ使用量の確認
 /switch - クーポンスイッチ
 /help - ヘルプの表示
-/deactivate - Botの無効化
+/bye - Botの無効化
 /start - Botの有効化
 `
 
@@ -66,7 +66,7 @@ function createBot(options: BotOption) {
   bot.command('usage', async (ctx) => {
     ctx.webhookReply = false
 
-    const botMessage = await ctx.reply('確認しています🚀')
+    const botMessage = await ctx.reply('確認中🚀')
 
     const user = await getUser(ctx)
     if (user) {
@@ -77,10 +77,11 @@ function createBot(options: BotOption) {
       ctx.deleteMessage(botMessage.message_id)
 
       await ctx.reply(
-        `本日の使用量は ${usage} MBで、データキャップは ${dataCap} MBです。今月の残量は ${remainingCoupon} MB です`
+        `本日の使用量: ${usage} MB / ${dataCap} MB
+今月の残量: ${remainingCoupon} MB`
       )
       await ctx.reply(
-        `本日は、あと ${Math.max(0, dataCap - usage)} MB 使えます`
+        `エコモード突入まで残り ${Math.max(0, dataCap - usage)} MBです`
       )
 
       await user.updateOne({ isCoupon })
@@ -97,7 +98,10 @@ function createBot(options: BotOption) {
       callbackButton('ON', 'couponOn'),
       callbackButton('OFF', 'couponOff'),
     ]).extra()
-    await ctx.reply(`クーポンスイッチ ${isCoupon ? 'ON' : 'OFF'}`, panel)
+    await ctx.reply(
+      `クーポンスイッチは${isCoupon ? '有効化' : '無効化'}されています`,
+      panel
+    )
   })
 
   // enable coupon
@@ -123,7 +127,7 @@ function createBot(options: BotOption) {
   })
 
   // deactivate account
-  bot.command('deactivate', async (ctx) => {
+  bot.command('bye', async (ctx) => {
     await ctx.reply(`データの紐付けを解消します`)
     const user = await getUser(ctx)
     await user.remove()
