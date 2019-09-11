@@ -1,7 +1,7 @@
 import assert from 'assert'
 import fetch from 'node-fetch'
 import { format } from 'date-fns'
-import { remainingDays } from './date'
+import { remainingDays } from './util'
 
 const MIO_DEVELOPER_ID = process.env.MIO_DEVELOPER_ID!
 assert(MIO_DEVELOPER_ID, 'MIO_DEVELOPER_ID is missing')

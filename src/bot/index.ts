@@ -6,6 +6,7 @@ import { Context } from 'telegraf'
 
 import { setCouponUseStatus } from '../core/mio'
 import * as database from '../core/database'
+import { formatMb } from '../core/util'
 
 import boostrapScene from './scenes/bootstrap'
 
@@ -67,12 +68,14 @@ function createBot(options: BotOption) {
     if (user) {
       const { dataCap, remainingCoupon, isCoupon, usage } = user
       await reply(
-        `本日の使用量: ${usage} MB / ${dataCap} MB
-今月の残量: ${remainingCoupon} MB`
+        `本日の使用量: ${formatMb(usage)} / ${formatMb(dataCap)}
+今月の残量: ${formatMb(remainingCoupon)}`
       )
       if (isCoupon) {
         await reply(
-          `エコモード突入まで残り ${Math.max(0, dataCap - usage)} MBです`
+          `エコモード突入まで残り ${formatMb(
+            Math.max(0, dataCap - usage)
+          )} です`
         )
       } else {
         await reply(`現在エコモードになっています`)

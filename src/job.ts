@@ -4,6 +4,7 @@ import { startOfToday } from 'date-fns'
 
 import * as mio from './core/mio'
 import { getAllUsers, closeConnection, UserDocument } from './core/database'
+import { formatMb } from './core/util'
 
 const CHECK_THRESHOLD_IN_SECONDS = 60
 const BOT_TOKEN = process.env.BOT_TOKEN!
@@ -51,7 +52,9 @@ async function handleUser(user: UserDocument) {
 
     await sendMessage(
       user.userID,
-      `エコモードを有効にしました☘️ 現時点での使用量は ${usage} MB / ${user.dataCap} MBです`
+      `エコモードを有効にしました☘️ 現時点での使用量は ${formatMb(
+        usage
+      )} / ${formatMb(user.dataCap)} です`
     )
   }
 
@@ -73,7 +76,9 @@ async function handleUser(user: UserDocument) {
 
     await sendMessage(
       user.userID,
-      `次の日になりました。昨日の使用実績は ${usage} MBです。本日の残量は ${newDataCap} MBです`
+      `次の日になりました。昨日の使用実績は ${formatMb(
+        usage
+      )} です。本日の残量は ${formatMb(newDataCap)} です`
     )
 
     if (!isCoupon) {
