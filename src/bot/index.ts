@@ -94,9 +94,9 @@ function createBot(options: BotOption) {
       callbackButton('OFF (永続的)', 'couponAndSwitchOff'),
     ]).extra()
     await ctx.reply(
-      `クーポンスイッチは${
-        isCoupon ? '有効化' : autoSwitch ? '無効化' : '永続的に無効化'
-      }されています`,
+      `クーポンスイッチ: ${
+        isCoupon ? 'ON' : autoSwitch ? 'OFF' : '永続的にOFF'
+      }`,
       panel
     )
   })
@@ -108,8 +108,8 @@ function createBot(options: BotOption) {
       serviceCode: user.serviceCode,
       token: user.token,
     })
-    await ctx.reply(`クーポンスイッチをオンにしました`)
     await user.updateOne({ isCoupon: true, autoSwitch: true })
+    await ctx.reply(`クーポンスイッチをオンにしました`)
   })
 
   // disable coupon
@@ -119,8 +119,8 @@ function createBot(options: BotOption) {
       serviceCode: user.serviceCode,
       token: user.token,
     })
-    await ctx.reply(`クーポンスイッチをオフにしました`)
     await user.updateOne({ isCoupon: false })
+    await ctx.reply(`クーポンスイッチをオフにしました`)
   })
 
   // disable coupon and autoswitch
@@ -130,8 +130,10 @@ function createBot(options: BotOption) {
       serviceCode: user.serviceCode,
       token: user.token,
     })
-    await ctx.reply(`クーポンスイッチをオフにしました`)
     await user.updateOne({ isCoupon: false, autoSwitch: false })
+    await ctx.reply(
+      `クーポンスイッチをオフにしました。自動でオンにはなりません`
+    )
   })
 
   // deactivate account

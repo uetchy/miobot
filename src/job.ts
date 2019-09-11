@@ -2,12 +2,7 @@ import assert from 'assert'
 import Telegraf from 'telegraf'
 import { startOfToday } from 'date-fns'
 
-import {
-  calcDataCap,
-  getDataUsage,
-  setCouponUseStatus,
-  getAvailableCoupon,
-} from './core/mio'
+import * as mio from './core/mio'
 import { getAllUsers, closeConnection, UserDocument } from './core/database'
 
 const CHECK_THRESHOLD_IN_SECONDS = 60
@@ -33,13 +28,14 @@ async function handleUser(user: UserDocument) {
   if (isTooManyRequest(user.lastCheck)) {
     throw new Error('too many request')
   }
+
   user.lastCheck = new Date()
 
-  const { usage, serviceCode } = await getDataUsage(token)
+  const { usage, serviceCode } = await mio.getDataUsage(token)
   user.usage = usage
   user.serviceCode = serviceCode
 
-  const { remainingCoupon, isCoupon } = await getAvailableCoupon(token)
+  const { remainingCoupon, isCoupon } = await mio.getAvailableCoupon(token)
   user.remainingCoupon = remainingCoupon
   user.isCoupon = isCoupon
 
@@ -48,10 +44,12 @@ async function handleUser(user: UserDocument) {
     // switch coupon and notify only if coupon switch is enabled
     if (user.isCoupon) {
       console.log('eco on')
-      await setCouponUseStatus(false, {
+      await mio.setCouponUseStatus(false, {
         token: token,
         serviceCode: user.serviceCode,
       })
+      user.isCoupon = false
+
       sendMessage(
         user.userID,
         `エコモードを有効にしました☘️ 現時点での使用量は ${usage} MB / ${user.dataCap} MBです`
@@ -61,26 +59,17 @@ async function handleUser(user: UserDocument) {
 
   // recalc data caps and notify new value every day
   const sot = startOfToday()
-
-  console.log('TZ', process.env.TZ)
-  console.log('lastUpdate', user.lastUpdate)
-  console.log('now', new Date())
-  console.log('sot', sot)
+  console.log('sot Locale', sot.toLocaleString())
   console.log('now Locale', new Date().toLocaleString())
   console.log('lastUpdate Locale', user.lastUpdate.toLocaleString())
-  console.log('sot Locale', sot.toLocaleString())
   console.log(
     'sot - lastUpdate in hours',
     (sot.getTime() - user.lastUpdate.getTime()) / 1000 / 60 / 60
   )
-  console.log(
-    'time since today starts',
-    (Date.now() - sot.getTime()) / 1000 / 60 / 60
-  )
 
   if (sot > user.lastUpdate) {
     console.log('new day coming')
-    const newDataCap = calcDataCap(remainingCoupon)
+    const newDataCap = mio.calcDataCap(remainingCoupon)
     user.dataCap = newDataCap
     user.lastUpdate = new Date()
 
@@ -92,14 +81,16 @@ async function handleUser(user: UserDocument) {
     if (!isCoupon) {
       if (user.autoSwitch) {
         console.log('eco off')
-        await setCouponUseStatus(true, {
+        await mio.setCouponUseStatus(true, {
           token,
           serviceCode,
         })
         user.isCoupon = true
+
         sendMessage(user.userID, `エコモードをOFFにしました`)
       } else {
         user.isCoupon = false
+
         sendMessage(
           user.userID,
           `自動スイッチが無効化されているため、エコモードを継続します`
