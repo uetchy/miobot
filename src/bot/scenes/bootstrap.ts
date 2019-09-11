@@ -5,12 +5,7 @@ import { inlineKeyboard, urlButton, callbackButton } from 'telegraf/markup'
 import addSeconds from 'date-fns/addSeconds'
 import differenceInSeconds from 'date-fns/differenceInSeconds'
 
-import {
-  getAuthorizeURL,
-  calcDataCap,
-  getAvailableCoupon,
-  getDataUsage,
-} from '../../core/mio'
+import * as mio from '../../core/mio'
 import { createUser, getUser, User } from '../../core/database'
 import { Context } from 'telegraf'
 
@@ -69,9 +64,9 @@ async function verifyToken(text: string, userID: number): Promise<User> {
   }
 
   const tokenExpiresAt = addSeconds(Date.now(), exp)
-  const { usage, serviceCode } = await getDataUsage(token)
-  const { isCoupon, remainingCoupon } = await getAvailableCoupon(token)
-  const dataCap = calcDataCap(remainingCoupon)
+  const { usage, serviceCode } = await mio.getDataUsage(token)
+  const { isCoupon, remainingCoupon } = await mio.getAvailableCoupon(token)
+  const dataCap = mio.calcDataCap(remainingCoupon)
 
   return {
     userID,
@@ -97,7 +92,7 @@ bootstrap.enter(async (ctx: Context) => {
   const { id, first_name } = ctx.chat
 
   const state = jwt.sign({ id: id, username: first_name }, JWT_SECRET)
-  const authURL = getAuthorizeURL(MIO_CALLBACK_URL, state)
+  const authURL = mio.getAuthorizeURL(MIO_CALLBACK_URL, state)
   const panel = inlineKeyboard([
     urlButton('ログイン', authURL),
     callbackButton('中止', 'cancel'),

@@ -53,7 +53,8 @@ declare module Telegraf {
     message: Message
     scene: Scene
     reply: (text: string, extra?: {}) => Promise<Message>
-    deleteMessage: (message_id: number) => Promise<void>
+    replyWithMarkdown: (markdown: string, extra?: {}) => Promise<Message>
+    deleteMessage: (message_id?: number) => Promise<void>
   }
 }
 

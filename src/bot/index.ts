@@ -2,22 +2,12 @@ import Telegraf from 'telegraf'
 import Stage from 'telegraf/stage'
 import { inlineKeyboard, callbackButton } from 'telegraf/markup'
 import RedisSession from 'telegraf-session-redis'
-import { Context } from 'telegraf'
 
 import { setCouponUseStatus } from '../core/mio'
-import * as database from '../core/database'
-import { formatMb } from '../core/util'
+import { getUser, formatMb } from '../core/util'
 
-import boostrapScene from './scenes/bootstrap'
-
-async function getUser(ctx: Context) {
-  const user = await database.getUser(ctx.chat.id)
-  if (user) {
-    return user
-  } else {
-    throw ctx.reply('まずは /start してセットアップしましょう')
-  }
-}
+import bootstrapScene from './scenes/bootstrap'
+import settingsScene from './scenes/settings'
 
 interface BotOption {
   port: number | string
@@ -27,21 +17,21 @@ interface BotOption {
   redisURL: string
 }
 
-function createBot(options: BotOption) {
-  const HELP = `
+const HELP = `
 /usage - データ使用量の確認
 /coupon - クーポンスイッチ
-/autoswitch - 自動スイッチ設定
+/settings - 設定
 /help - ヘルプの表示
-/bye - Botの無効化
-/start - Botの有効化
+/start - IIJmioアカウントに接続
 `
 
+function createBot(options: BotOption) {
   // create scene manager
   const stage = new Stage()
 
   stage.command('cancel', Stage.leave())
-  stage.register(boostrapScene)
+  stage.register(bootstrapScene)
+  stage.register(settingsScene)
 
   // session
   const session = new RedisSession({
@@ -56,32 +46,31 @@ function createBot(options: BotOption) {
   const bot = new Telegraf(options.botToken)
   bot.use(session)
   bot.use(stage.middleware())
+
   bot.start(async (ctx) => {
     ctx.scene.enter('bootstrap')
   })
 
+  bot.command('settings', (ctx) => ctx.scene.enter('settings'))
+
   // show usage
   bot.command('usage', async (ctx) => {
+    const { reply, replyWithMarkdown } = ctx
     const user = await getUser(ctx)
-    const { reply } = ctx
+    const { dataCap, remainingCoupon, isCoupon, usage } = user
 
-    if (user) {
-      const { dataCap, remainingCoupon, isCoupon, usage } = user
-      await reply(
-        `本日の使用量: ${formatMb(usage)} / ${formatMb(dataCap)}
+    await replyWithMarkdown(
+      `本日の使用量: ${formatMb(usage)} / ${formatMb(dataCap)}
 今月の残量: ${formatMb(remainingCoupon)}`
+    )
+    if (isCoupon) {
+      await replyWithMarkdown(
+        `エコモード突入まで残り *${formatMb(
+          Math.max(0, dataCap - usage)
+        )}* です`
       )
-      if (isCoupon) {
-        await reply(
-          `エコモード突入まで残り ${formatMb(
-            Math.max(0, dataCap - usage)
-          )} です`
-        )
-      } else {
-        await reply(`現在エコモードになっています`)
-      }
     } else {
-      reply('まずは /start してセットアップしましょう')
+      await reply(`現在エコモードになっています`)
     }
   })
 
@@ -121,52 +110,6 @@ function createBot(options: BotOption) {
     })
     await user.updateOne({ isCoupon: false })
     await reply(`クーポンスイッチをオフにしました`)
-  })
-
-  // auto switch config
-  bot.command('autoswitch', async (ctx) => {
-    const { autoSwitch } = await getUser(ctx)
-    const { reply } = ctx
-
-    const panel = inlineKeyboard([
-      callbackButton('ON', 'autoSwitchOn'),
-      callbackButton('OFF', 'autoSwitchOff'),
-    ]).extra()
-    await reply(`自動スイッチ: ${autoSwitch ? 'ON' : 'OFF'}`, panel)
-  })
-
-  // enable autoSwitch
-  bot.action('autoSwitchOn', async (ctx) => {
-    const user = await getUser(ctx)
-    const { reply } = ctx
-
-    await user.updateOne({ autoSwitch: true })
-    await reply(
-      `自動スイッチをオンにしました。クーポンスイッチは自動で操作されます`
-    )
-  })
-
-  // disable autoSwitch
-  bot.action('autoSwitchOff', async (ctx) => {
-    const user = await getUser(ctx)
-    const { reply } = ctx
-
-    await user.updateOne({ autoSwitch: false })
-    await reply(
-      `自動スイッチをオフにしました。クーポンスイッチは自動で操作されません`
-    )
-  })
-
-  // deactivate account
-  bot.command('bye', async (ctx) => {
-    const { reply } = ctx
-
-    await reply(`データの紐付けを解消します`)
-
-    const user = await getUser(ctx)
-    await user.remove()
-
-    await reply(`完了しました。さようなら！ /start で再開できます`)
   })
 
   // show help
