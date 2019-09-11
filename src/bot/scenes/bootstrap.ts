@@ -93,6 +93,7 @@ const bootstrap = new Scene('bootstrap')
 
 bootstrap.enter(async (ctx: Context) => {
   ctx.webhookReply = false
+  const { reply } = ctx
   const { id, first_name } = ctx.chat
 
   const state = jwt.sign({ id: id, username: first_name }, JWT_SECRET)
@@ -102,29 +103,30 @@ bootstrap.enter(async (ctx: Context) => {
     callbackButton('中止', 'cancel'),
   ]).extra()
 
-  await ctx.reply(
+  await reply(
     'IIJmioにログインして、手に入れたトークンをここに貼り付けてください',
     panel
   )
 })
 
 bootstrap.on('message', async (ctx: Context) => {
-  const { message_id, text } = ctx.message
-  const userID = ctx.chat.id
+  const { reply, deleteMessage, scene, message, chat } = ctx
+  const { message_id, text } = message
+  const { id } = chat
 
   try {
     // verify token
     let userInfo: User | null = null
     try {
-      userInfo = (await verifyToken(text, userID)) as User
-      await ctx.deleteMessage(message_id)
+      userInfo = (await verifyToken(text, id)) as User
+      await deleteMessage(message_id)
     } catch (err) {
       throw new Error(err.message)
     }
 
     // reset user data
     try {
-      const user = await getUser(userID)
+      const user = await getUser(id)
       if (user) {
         await user.remove()
       }
@@ -135,18 +137,18 @@ bootstrap.on('message', async (ctx: Context) => {
     // create user
     try {
       await createUser(userInfo)
-      await ctx.reply(`こんにちは、${userInfo.username}`)
-      await ctx.reply(
+      await reply(`こんにちは、${userInfo.username}`)
+      await reply(
         `まずは /usage コマンドを試してください。 /help でヘルプを表示します`
       )
-      return ctx.scene.leave()
+      return scene.leave()
     } catch (err) {
       console.log(err)
       throw new Error(`ユーザー作成に失敗しました😭`)
     }
   } catch (err) {
-    await ctx.reply(err.message)
-    return ctx.scene.reenter()
+    await reply(err.message)
+    return scene.reenter()
   }
 })
 

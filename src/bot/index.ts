@@ -61,78 +61,84 @@ function createBot(options: BotOption) {
 
   // show usage
   bot.command('usage', async (ctx) => {
-    ctx.webhookReply = false
-
-    const botMessage = await ctx.reply('確認中🚀')
-
     const user = await getUser(ctx)
+    const { reply } = ctx
+
     if (user) {
       const { dataCap, remainingCoupon, isCoupon, usage } = user
-
-      ctx.deleteMessage(botMessage.message_id)
-
-      await ctx.reply(
+      await reply(
         `本日の使用量: ${usage} MB / ${dataCap} MB
 今月の残量: ${remainingCoupon} MB`
       )
-      await ctx.reply(
-        `エコモード突入まで残り ${Math.max(0, dataCap - usage)} MBです`
-      )
-
-      await user.updateOne({ isCoupon, usage })
+      if (isCoupon) {
+        await reply(
+          `エコモード突入まで残り ${Math.max(0, dataCap - usage)} MBです`
+        )
+      } else {
+        await reply(`現在エコモードになっています`)
+      }
     } else {
-      ctx.deleteMessage(botMessage.message_id)
-      ctx.reply('まずは /start してセットアップしましょう')
+      reply('まずは /start してセットアップしましょう')
     }
   })
 
   // coupon switch
   bot.command('coupon', async (ctx) => {
     const { isCoupon } = await getUser(ctx)
+    const { reply } = ctx
+
     const panel = inlineKeyboard([
       callbackButton('ON', 'couponOn'),
       callbackButton('OFF', 'couponOff'),
     ]).extra()
-    await ctx.reply(`クーポンスイッチ: ${isCoupon ? 'ON' : 'OFF'}`, panel)
+    await reply(`クーポンスイッチ: ${isCoupon ? 'ON' : 'OFF'}`, panel)
   })
 
   // enable coupon
   bot.action('couponOn', async (ctx) => {
     const user = await getUser(ctx)
+    const { reply } = ctx
+
     await setCouponUseStatus(true, {
       serviceCode: user.serviceCode,
       token: user.token,
     })
     await user.updateOne({ isCoupon: true })
-    await ctx.reply(`クーポンスイッチをオンにしました`)
+    await reply(`クーポンスイッチをオンにしました`)
   })
 
   // disable coupon
   bot.action('couponOff', async (ctx) => {
     const user = await getUser(ctx)
+    const { reply } = ctx
+
     await setCouponUseStatus(false, {
       serviceCode: user.serviceCode,
       token: user.token,
     })
     await user.updateOne({ isCoupon: false })
-    await ctx.reply(`クーポンスイッチをオフにしました`)
+    await reply(`クーポンスイッチをオフにしました`)
   })
 
   // auto switch config
   bot.command('autoswitch', async (ctx) => {
     const { autoSwitch } = await getUser(ctx)
+    const { reply } = ctx
+
     const panel = inlineKeyboard([
       callbackButton('ON', 'autoSwitchOn'),
       callbackButton('OFF', 'autoSwitchOff'),
     ]).extra()
-    await ctx.reply(`自動スイッチ: ${autoSwitch ? 'ON' : 'OFF'}`, panel)
+    await reply(`自動スイッチ: ${autoSwitch ? 'ON' : 'OFF'}`, panel)
   })
 
   // enable autoSwitch
   bot.action('autoSwitchOn', async (ctx) => {
     const user = await getUser(ctx)
+    const { reply } = ctx
+
     await user.updateOne({ autoSwitch: true })
-    await ctx.reply(
+    await reply(
       `自動スイッチをオンにしました。クーポンスイッチは自動で操作されます`
     )
   })
@@ -140,18 +146,24 @@ function createBot(options: BotOption) {
   // disable autoSwitch
   bot.action('autoSwitchOff', async (ctx) => {
     const user = await getUser(ctx)
+    const { reply } = ctx
+
     await user.updateOne({ autoSwitch: false })
-    await ctx.reply(
+    await reply(
       `自動スイッチをオフにしました。クーポンスイッチは自動で操作されません`
     )
   })
 
   // deactivate account
   bot.command('bye', async (ctx) => {
-    await ctx.reply(`データの紐付けを解消します`)
+    const { reply } = ctx
+
+    await reply(`データの紐付けを解消します`)
+
     const user = await getUser(ctx)
     await user.remove()
-    await ctx.reply(`完了しました。さようなら！ /start で再開できます`)
+
+    await reply(`完了しました。さようなら！ /start で再開できます`)
   })
 
   // show help
