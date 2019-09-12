@@ -1,3 +1,4 @@
+.secrets.baseline
 /dist
 .envrc
 # Created by https://www.gitignore.io/api/node
