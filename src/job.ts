@@ -33,6 +33,7 @@ async function handleUser(user: UserDocument) {
   user.lastCheck = new Date()
 
   const { usage, serviceCode } = await mio.getDataUsage(token)
+  console.log(`usage: ${usage} for ${serviceCode}`)
   user.usage = usage
   user.serviceCode = serviceCode
 
@@ -62,11 +63,6 @@ async function handleUser(user: UserDocument) {
   const sot = startOfToday()
   console.log('sot Locale', sot.toLocaleString())
   console.log('now Locale', new Date().toLocaleString())
-  console.log('lastUpdate Locale', user.lastUpdate.toLocaleString())
-  console.log(
-    'sot - lastUpdate in hours',
-    (sot.getTime() - user.lastUpdate.getTime()) / 1000 / 60 / 60
-  )
 
   if (sot > user.lastUpdate) {
     console.log('new day coming')
@@ -111,10 +107,10 @@ async function handler() {
   let hasError = false
   for (const user of users) {
     try {
-      console.log(`Start(${user.username}):`)
+      console.log(`Start(${user.userID}):`)
       await handleUser(user)
     } catch (err) {
-      console.log(`Error(${user.username}):`)
+      console.log(`Error(${user.userID}):`)
       console.log(err)
       hasError = true
     }

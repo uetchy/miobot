@@ -81,7 +81,6 @@ export async function getAllUsers() {
 }
 
 export async function closeConnection() {
-  if (cachedDB) {
-    return cachedDB.close()
-  }
+  const conn = await connectToDatabase()
+  await conn.close()
 }
