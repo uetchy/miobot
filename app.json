@@ -2,6 +2,6 @@
   "name": "miobot",
   "description": "A Telegram bot handles mio monthly usage.",
   "repository": "https://github.com/uetchy/miobot",
-  "logo": "https://raw.githubusercontent.com/uetchy/miobot/master/.github/miobot.png",
+  "logo": "https://raw.githubusercontent.com/uetchy/miobot/master/.github/mio.png",
   "keywords": ["iijmio", "mio", "telegram"]
 }
