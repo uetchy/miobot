@@ -3,5 +3,41 @@
   "description": "A Telegram bot handles mio monthly usage.",
   "repository": "https://github.com/uetchy/miobot",
   "logo": "https://raw.githubusercontent.com/uetchy/miobot/master/.github/mio.png",
-  "keywords": ["iijmio", "mio", "telegram"]
+  "keywords": ["iijmio", "mio", "telegram"],
+  "addons": [
+    {
+      "plan": "rediscloud:30"
+    },
+    {
+      "plan": "scheduler:standard"
+    },
+    {
+      "plan": "mongolab:sandbox"
+    }
+  ],
+  "env": {
+    "MIO_DEVELOPER_ID": {
+      "description": "IIJmio Developer ID",
+      "value": ""
+    },
+    "MIO_CALLBACK_URL": {
+      "description": "IIJmio callback URL",
+      "value": "https://<your-app-name>.herokuapp.com/callback"
+    },
+    "API_SECRET": {
+      "description": "API secret for miobot API",
+      "generator": "secret"
+    },
+    "JWT_SECRET": {
+      "description": "JWT secret for signing IIJmio API token",
+      "generator": "secret"
+    },
+    "BOT_TOKEN": {
+      "description": "Bot token for Telegram"
+    },
+    "WEBHOOK_URL": {
+      "description": "Webhook URL to be passed to Telegram Bot",
+      "value": "https://<your-app-name>.herokuapp.com"
+    }
+  }
 }
