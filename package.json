@@ -2,7 +2,6 @@
   "name": "miobot",
   "version": "0.0.0",
   "author": "Yasuaki Uechi <y@uechi.io> (https://uechi.io/)",
-  "main": "dist/server.js",
   "scripts": {
     "build": "run-p build:*",
     "build:server": "tsc",
@@ -38,5 +37,6 @@
     "@types/node": "^14.0.14",
     "@types/node-fetch": "^2.5.7"
   },
+  "main": "dist/server.js",
   "license": "MIT"
 }
