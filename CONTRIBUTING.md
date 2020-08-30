@@ -10,6 +10,5 @@ WEBHOOK_DOMAIN=<unique>.ngrok.io yarn dev
 ## Ship
 
 ```
-git commit ...
 yarn ship
 ```

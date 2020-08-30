@@ -1,3 +1,4 @@
+.vscode
 .secrets.baseline
 /dist
 .envrc
